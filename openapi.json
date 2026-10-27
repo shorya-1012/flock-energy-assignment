@@ -1,0 +1,766 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Flock Energy Meter Operations API",
+    "version": "1.0.0",
+    "description": "Read-only API over the Urja Meter Ops portal, exposing meter search, meter details, distribution transformers, and bulk meter export."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8080",
+      "description": "Local development"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Health",
+      "description": "API health check"
+    },
+    {
+      "name": "Meters",
+      "description": "Search meters and retrieve meter data"
+    },
+    {
+      "name": "Distribution Transformers",
+      "description": "List distribution transformers"
+    },
+    {
+      "name": "Export",
+      "description": "Bulk meter data export"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Check service health",
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "description": "Service is running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                },
+                "example": {
+                  "status": "ok"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/meters": {
+      "get": {
+        "tags": [
+          "Meters"
+        ],
+        "summary": "Search meters",
+        "operationId": "listMeters",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "Search query forwarded to the upstream meter search endpoint.",
+            "schema": {
+              "type": "string",
+              "default": ""
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "One-based page number.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated meter search results.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeterSearchResponse"
+                },
+                "example": {
+                  "data": {
+                    "data": [
+                      {
+                        "dtCode": "DT-001",
+                        "installStatus": "Decommissioned",
+                        "make": "HPL",
+                        "meterId": "J100000",
+                        "phaseType": "single",
+                        "serialNo": "SE33962"
+                      }
+                    ],
+                    "page": 1,
+                    "pageSize": 20,
+                    "total": 403
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "502": {
+            "$ref": "#/components/responses/UpstreamError"
+          }
+        }
+      }
+    },
+    "/meters/{id}/geo": {
+      "get": {
+        "tags": [
+          "Meters"
+        ],
+        "summary": "Get a meter's geographic coordinates",
+        "operationId": "getMeterGeo",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/MeterId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Geographic coordinates for the requested meter.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeterGeoResponse"
+                },
+                "example": {
+                  "data": {
+                    "latitude": "26.938961002479868",
+                    "longitude": "75.83095696146852"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "502": {
+            "$ref": "#/components/responses/UpstreamError"
+          }
+        }
+      }
+    },
+    "/meters/{id}/energy": {
+      "get": {
+        "tags": [
+          "Meters"
+        ],
+        "summary": "Get a meter's energy readings",
+        "operationId": "getMeterEnergy",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/MeterId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Energy readings for the requested meter. The observed response wraps readings in data.data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeterEnergyResponse"
+                },
+                "example": {
+                  "data": {
+                    "data": [
+                      {
+                        "kvah": "52313.84",
+                        "kwh": "48438.74",
+                        "timestamp": "23/06/2026 23:30",
+                        "voltR": "226"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "502": {
+            "$ref": "#/components/responses/UpstreamError"
+          }
+        }
+      }
+    },
+    "/dts": {
+      "get": {
+        "tags": [
+          "Distribution Transformers"
+        ],
+        "summary": "List distribution transformers",
+        "operationId": "listDistributionTransformers",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "One-based page number.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated distribution-transformer records.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransformerListResponse"
+                },
+                "example": {
+                  "data": {
+                    "data": [
+                      {
+                        "capacityKva": 100,
+                        "code": "DT-001",
+                        "feederCode": "F-001",
+                        "name": "Malviya Nagar DT 1"
+                      }
+                    ],
+                    "page": 1,
+                    "pageSize": 20,
+                    "total": 40
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "502": {
+            "$ref": "#/components/responses/UpstreamError"
+          }
+        }
+      }
+    },
+    "/export": {
+      "get": {
+        "tags": [
+          "Export"
+        ],
+        "summary": "Export meter records",
+        "description": "Returns the upstream bulk export. The service retrieves the signing secret from the portal and generates the required HMAC-SHA256 signature internally; callers do not provide signing headers.",
+        "operationId": "exportMeters",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Page parameter passed to the upstream export endpoint.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Exported meter records and total record count. The observed export response contains 403 records in data and total.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeterExportResponse"
+                },
+                "example": {
+                  "data": [
+                    {
+                      "build": "legacy",
+                      "dtCode": "DT-001",
+                      "geo": {
+                        "lat": 26.938961002479868,
+                        "lng": 75.83095696146852
+                      },
+                      "hierarchy": {
+                        "circle": {
+                          "code": "C-01",
+                          "name": "Circle 1"
+                        },
+                        "division": {
+                          "code": "D-01",
+                          "name": "Division 1"
+                        },
+                        "dt": {
+                          "code": "DT-001",
+                          "name": "Malviya Nagar DT 1"
+                        },
+                        "feeder": {
+                          "code": "F-001",
+                          "name": "Feeder 1"
+                        },
+                        "subdivision": {
+                          "code": "SD-01",
+                          "name": "Subdivision 1"
+                        },
+                        "substation": {
+                          "code": "SS-01",
+                          "name": "Substation 1"
+                        },
+                        "zone": {
+                          "code": "Z-01",
+                          "name": "Jaipur Zone 1"
+                        }
+                      },
+                      "installStatus": "Decommissioned",
+                      "installType": "Whole Current",
+                      "make": "HPL",
+                      "meterId": "J100000",
+                      "phaseType": "single",
+                      "serialNo": "SE33962"
+                    }
+                  ],
+                  "total": 403
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "502": {
+            "$ref": "#/components/responses/UpstreamError"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "MeterId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Meter identifier, for example J100000.",
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        },
+        "example": "J100000"
+      }
+    },
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "details": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "additionalProperties": true
+      },
+      "MeterSearchItem": {
+        "type": "object",
+        "properties": {
+          "dtCode": {
+            "type": "string"
+          },
+          "installStatus": {
+            "type": "string"
+          },
+          "make": {
+            "type": "string"
+          },
+          "meterId": {
+            "type": "string"
+          },
+          "phaseType": {
+            "type": "string"
+          },
+          "serialNo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "meterId"
+        ],
+        "additionalProperties": true
+      },
+      "MeterSearchPage": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MeterSearchItem"
+            }
+          },
+          "page": {
+            "type": "integer"
+          },
+          "pageSize": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "data",
+          "page",
+          "pageSize",
+          "total"
+        ],
+        "additionalProperties": true
+      },
+      "MeterSearchResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/MeterSearchPage"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": true
+      },
+      "MeterGeo": {
+        "type": "object",
+        "properties": {
+          "latitude": {
+            "type": "string"
+          },
+          "longitude": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "latitude",
+          "longitude"
+        ],
+        "additionalProperties": true
+      },
+      "MeterGeoResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/MeterGeo"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": true
+      },
+      "EnergyReading": {
+        "type": "object",
+        "properties": {
+          "kvah": {
+            "type": "string"
+          },
+          "kwh": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "Observed format: DD/MM/YYYY HH:mm"
+          },
+          "voltR": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kvah",
+          "kwh",
+          "timestamp",
+          "voltR"
+        ],
+        "additionalProperties": true
+      },
+      "EnergyReadingsData": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EnergyReading"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": true
+      },
+      "MeterEnergyResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/EnergyReadingsData"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": true
+      },
+      "Transformer": {
+        "type": "object",
+        "properties": {
+          "capacityKva": {
+            "type": "integer"
+          },
+          "code": {
+            "type": "string"
+          },
+          "feederCode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "capacityKva",
+          "code",
+          "feederCode",
+          "name"
+        ],
+        "additionalProperties": true
+      },
+      "TransformerPage": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Transformer"
+            }
+          },
+          "page": {
+            "type": "integer"
+          },
+          "pageSize": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "data",
+          "page",
+          "pageSize",
+          "total"
+        ],
+        "additionalProperties": true
+      },
+      "TransformerListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/TransformerPage"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "additionalProperties": true
+      },
+      "HierarchyNode": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ],
+        "additionalProperties": true
+      },
+      "MeterHierarchy": {
+        "type": "object",
+        "properties": {
+          "zone": {
+            "$ref": "#/components/schemas/HierarchyNode"
+          },
+          "circle": {
+            "$ref": "#/components/schemas/HierarchyNode"
+          },
+          "division": {
+            "$ref": "#/components/schemas/HierarchyNode"
+          },
+          "subdivision": {
+            "$ref": "#/components/schemas/HierarchyNode"
+          },
+          "substation": {
+            "$ref": "#/components/schemas/HierarchyNode"
+          },
+          "feeder": {
+            "$ref": "#/components/schemas/HierarchyNode"
+          },
+          "dt": {
+            "$ref": "#/components/schemas/HierarchyNode"
+          }
+        },
+        "additionalProperties": true
+      },
+      "GeoPoint": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "lat",
+          "lng"
+        ],
+        "additionalProperties": true
+      },
+      "ExportedMeter": {
+        "type": "object",
+        "properties": {
+          "build": {
+            "type": "string"
+          },
+          "dtCode": {
+            "type": "string"
+          },
+          "geo": {
+            "$ref": "#/components/schemas/GeoPoint"
+          },
+          "hierarchy": {
+            "$ref": "#/components/schemas/MeterHierarchy"
+          },
+          "installStatus": {
+            "type": "string"
+          },
+          "installType": {
+            "type": "string"
+          },
+          "make": {
+            "type": "string"
+          },
+          "meterId": {
+            "type": "string"
+          },
+          "phaseType": {
+            "type": "string"
+          },
+          "serialNo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "meterId"
+        ],
+        "additionalProperties": true
+      },
+      "MeterExportResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportedMeter"
+            }
+          },
+          "total": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "data",
+          "total"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Invalid query or path parameter.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": "page must be greater than zero"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "The requested meter was not found, if the handler maps the upstream response to 404.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": "Meter not found"
+            }
+          }
+        }
+      },
+      "UpstreamError": {
+        "description": "The upstream portal request failed or returned an unsuccessful response.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": "Unable to export meter data",
+              "details": "Upstream request failed"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
